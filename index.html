@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalkulator Subnet & VLSM</title>
+<meta name="description" content="Kalkulator subnet dan VLSM IPv4 untuk guru SMK TKJ, lengkap dengan penggaris ruang alamat dan jejak biner AND.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8f9fa;
+    --surface-2: #f1f3f4;
+    --line: #dadce0;
+    --line-soft: #e8eaed;
+    --text: #202124;
+    --text-2: #5f6368;
+    --text-3: #70757a;
+    --blue: #1a73e8;
+    --blue-strong: #1765cc;
+    --blue-tint: #e8f0fe;
+    --blue-ink: #174ea6;
+    --red: #d93025;
+    --red-tint: #fce8e6;
+    --green: #188038;
+    --host: #70757a;
+    --radius: 16px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+    --font: "Google Sans Text", "Google Sans", Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: "Roboto Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --seg-1: #d2e3fc; --seg-1-ink: #174ea6; --seg-1-edge: #1a73e8;
+    --seg-2: #c4eed0; --seg-2-ink: #0d652d; --seg-2-edge: #1e8e3e;
+    --seg-3: #feefc3; --seg-3-ink: #7a4f01; --seg-3-edge: #f9ab00;
+    --seg-4: #e9d2fd; --seg-4-ink: #681da8; --seg-4-edge: #9334e6;
+    --seg-5: #cbf0f8; --seg-5-ink: #075e6c; --seg-5-edge: #12b5cb;
+    --seg-6: #fad2cf; --seg-6-ink: #a50e0e; --seg-6-edge: #d93025;
+    color-scheme: light;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 400 16px/1.5 var(--font);
+    caret-color: var(--blue);
+  }
+  ::selection { background: var(--blue-tint); color: var(--blue-ink); }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  button, input { font: inherit; color: inherit; }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Header & tabs ---------- */
+  header.top {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 0 8px;
+  }
+  .brand svg { flex: none; }
+  .brand h1 { margin: 0; font-size: 1.75rem; font-weight: 500; letter-spacing: 0; }
+  .brand p { margin: 0; color: var(--text-2); font-size: .875rem; }
+
+  .tabs { display: flex; gap: 8px; margin-top: 8px; }
+  .tab {
+    position: relative;
+    appearance: none; border: 0; background: none; cursor: pointer;
+    padding: 12px 16px 14px;
+    font-size: .9375rem; font-weight: 500; color: var(--text-2);
+    border-radius: 8px 8px 0 0;
+    transition: color .15s ease, background-color .15s ease;
+  }
+  .tab:hover { color: var(--text); background: var(--surface); }
+  .tab[aria-selected="true"] { color: var(--blue); }
+  .tab[aria-selected="true"]:hover { color: var(--blue-ink); }
+  .tab[aria-selected="true"]::after {
+    content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px;
+    background: var(--blue); border-radius: 3px 3px 0 0;
+  }
+
+  main.wrap { padding-top: 32px; padding-bottom: 64px; }
+  [role="tabpanel"][hidden] { display: none; }
+
+  /* ---------- Form ---------- */
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .form-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.grow { flex: 1 1 260px; }
+  .field label { font-size: .8125rem; font-weight: 500; color: var(--text-2); }
+  .control {
+    display: flex; align-items: center; min-width: 0;
+    height: 52px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .control:hover { border-color: var(--text-3); }
+  .control:focus-within { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+  .control.invalid { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+  .control input {
+    flex: 1; min-width: 0; width: 100%; height: 100%;
+    border: 0; outline: 0; background: transparent;
+    padding: 0 14px;
+    font-size: 1.125rem; font-variant-numeric: tabular-nums;
+  }
+  .control input::placeholder { color: var(--text-3); }
+  .control .affix { padding-left: 14px; color: var(--text-3); font-size: 1.125rem; }
+  .control .affix + input { padding-left: 4px; }
+  .field.prefix { width: 120px; }
+  .control input[type="number"] { -moz-appearance: textfield; }
+  .control input::-webkit-outer-spin-button,
+  .control input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 52px; padding: 0 24px;
+    border-radius: 26px; border: 1px solid transparent;
+    font-size: .9375rem; font-weight: 500; cursor: pointer;
+    transition: background-color .15s ease, box-shadow .15s ease, color .15s ease;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: var(--blue-strong); box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15); }
+  .btn-primary:active { background: var(--blue-ink); }
+  .btn-primary[disabled] { background: #c2d7f6; cursor: progress; box-shadow: none; }
+  .btn-text { background: transparent; color: var(--blue); height: 40px; padding: 0 12px; border-radius: 20px; }
+  .btn-text:hover { background: var(--blue-tint); color: var(--blue-ink); }
+  .field-spacer { padding-top: 25px; }
+
+  .error {
+    display: flex; gap: 8px; align-items: flex-start;
+    margin: 14px 0 0; color: var(--red); font-size: .875rem;
+  }
+  .error[hidden] { display: none; }
+  .error svg { flex: none; margin-top: 2px; }
+
+  .hint { margin: 14px 0 0; color: var(--text-2); font-size: .875rem; }
+  .hint button { padding: 0; border: 0; background: none; color: var(--blue); cursor: pointer; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ---------- Result shell ---------- */
+  .result { margin-top: 32px; }
+  .result-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 16px; }
+  .result-head h2 { margin: 0; font-size: 1.375rem; font-weight: 500; }
+  .result-head h2 .cidr { font-family: var(--mono); font-weight: 500; color: var(--blue-ink); }
+  .result-head .meta { color: var(--text-2); font-size: .875rem; font-variant-numeric: tabular-nums; }
+
+  .empty {
+    margin-top: 32px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    color: var(--text-2);
+  }
+  .empty h2 { margin: 0 0 6px; font-size: 1.125rem; font-weight: 500; color: var(--text); }
+  .empty p { margin: 0; max-width: 60ch; }
+  .empty .ghost { margin-top: 20px; opacity: .55; }
+
+  /* ---------- Ruler ---------- */
+  .ruler { position: relative; padding: 34px 0 30px; }
+  .ruler .track {
+    position: relative; height: 40px;
+    background: var(--surface-2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .ruler .ticks {
+    position: absolute; inset: 0;
+    --step: calc(100% / var(--ticks, 8));
+    background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(var(--step) - 1px), rgba(95,99,104,.18) calc(var(--step) - 1px), rgba(95,99,104,.18) var(--step));
+    pointer-events: none;
+  }
+  .ruler .hosts { position: absolute; top: 0; bottom: 0; background: var(--blue-tint); }
+  .ruler .edge { position: absolute; top: 0; bottom: 0; min-width: 3px; }
+  .ruler .edge.net { background: var(--blue); }
+  .ruler .edge.bc { background: var(--text-2); }
+  .ruler .marker { position: absolute; top: 4px; height: 74px; width: 0; }
+  .ruler .marker::before {
+    content: ""; position: absolute; left: -1px; top: 22px; bottom: 0; width: 2px; background: var(--text);
+  }
+  .ruler .marker .pin {
+    position: absolute; top: 0; transform: translateX(-50%);
+  }
+  .ruler .marker.at-start .pin { transform: translateX(-10px); }
+  .ruler .marker.at-end .pin { transform: translateX(calc(-100% + 10px)); }
+  .ruler .marker .pin {
+    background: var(--text); color: #fff; font: 500 .75rem/1 var(--mono);
+    padding: 4px 8px; border-radius: 10px; white-space: nowrap;
+  }
+  .ruler .ends { display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; font-size: .8125rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .ruler .ends strong { display: block; font-family: var(--mono); font-weight: 500; color: var(--text); font-size: .875rem; }
+  .ruler .ends .right { text-align: right; }
+
+  /* VLSM segments */
+  .ruler.vlsm .track { height: 56px; background: repeating-linear-gradient(135deg, var(--surface-2) 0 6px, #e8eaed 6px 12px); }
+  .seg {
+    position: absolute; top: 0; bottom: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 10px; overflow: hidden;
+    border-left: 2px solid var(--bg);
+    font-size: .8125rem; line-height: 1.25; white-space: nowrap;
+    cursor: default;
+    transition: filter .15s ease, box-shadow .15s ease;
+  }
+  .seg:first-child { border-left: 0; }
+  .seg b { font-family: var(--mono); font-weight: 500; }
+  .seg span { opacity: .85; font-variant-numeric: tabular-nums; }
+  .seg.narrow { padding: 0; align-items: center; }
+  .seg.narrow b, .seg.narrow span { display: none; }
+  .seg.narrow::after { content: attr(data-n); font: 500 .75rem var(--mono); }
+  .seg.is-hot { box-shadow: inset 0 0 0 2px currentColor; }
+  .free-label { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: .8125rem; color: var(--text-2); overflow: hidden; white-space: nowrap; }
+
+  /* ---------- Values grid ---------- */
+  .values {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .values div { padding: 18px 20px; border-right: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); min-width: 0; }
+  .values div:nth-child(3n) { border-right: 0; }
+  .values div:nth-last-child(-n+3) { border-bottom: 0; }
+  .values dt { font-size: .8125rem; color: var(--text-2); margin-bottom: 4px; }
+  .values dd { margin: 0; font-family: var(--mono); font-size: clamp(1.125rem, 1rem + .6vw, 1.5rem); font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .values dd .note { display: block; font-family: var(--font); font-size: .8125rem; font-weight: 400; color: var(--text-2); margin-top: 2px; }
+  .values dd.big { color: var(--blue-ink); }
+
+  /* ---------- Binary trace ---------- */
+  .trace { margin-top: 32px; }
+  .trace h3, .alloc h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 500; }
+  .trace > p { margin: 0 0 16px; color: var(--text-2); font-size: .875rem; max-width: 72ch; }
+  .trace .legends { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 8px 0 4px; font-size: .875rem; color: var(--text-2); }
+  .legend { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; white-space: nowrap; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .bits-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  table.bits { border-collapse: collapse; width: 100%; min-width: 640px; font-variant-numeric: tabular-nums; }
+  table.bits th, table.bits td { padding: 10px 16px; text-align: left; white-space: nowrap; }
+  table.bits th { font-size: .8125rem; font-weight: 500; color: var(--text-2); width: 1%; }
+  table.bits td.dec { font-family: var(--mono); font-size: .9375rem; width: 1%; padding-right: 24px; }
+  table.bits td.bin { font-family: var(--mono); font-size: 1rem; letter-spacing: .04em; }
+  table.bits tr.op td, table.bits tr.op th { padding-top: 2px; padding-bottom: 2px; color: var(--text-3); font-size: .8125rem; }
+  table.bits tr.sum { border-top: 2px solid var(--text); }
+  table.bits tr.sum.soft { border-top: 1px dashed var(--line); }
+  .b-n { color: var(--blue); font-weight: 600; }
+  .b-h { color: var(--host); }
+  .b-dot { color: var(--text-3); padding: 0 .15em; }
+  .b-cut { display: inline-block; width: 2px; height: 1.2em; background: var(--red); vertical-align: -0.2em; margin: 0 .2em; border-radius: 1px; }
+
+  /* ---------- VLSM form ---------- */
+  .needs { margin-top: 20px; }
+  .needs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .needs-head span { font-size: .8125rem; font-weight: 500; color: var(--text-2); }
+  .needs-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .need { display: flex; align-items: center; gap: 4px; }
+  .need .control { flex: 1; height: 48px; }
+  .need .control .affix { font-size: .8125rem; font-family: var(--mono); min-width: 2.2em; }
+  .need .control input { font-size: 1rem; }
+  .need .control .unit { padding-right: 12px; color: var(--text-3); font-size: .875rem; }
+  .icon-btn {
+    flex: none; width: 40px; height: 40px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 0; background: transparent; color: var(--text-2); cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .icon-btn[disabled] { opacity: .35; cursor: not-allowed; background: transparent; }
+  .vlsm-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
+
+  /* ---------- Allocation table ---------- */
+  .alloc { margin-top: 32px; }
+  .usage { display: flex; align-items: center; gap: 12px; color: var(--text-2); font-size: .875rem; font-variant-numeric: tabular-nums; }
+  table.alloc-t { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .alloc-wrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-top: 12px; }
+  table.alloc-t th { text-align: left; font-size: .8125rem; font-weight: 500; color: var(--text-2); background: var(--surface); padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.alloc-t td { padding: 14px 16px; border-bottom: 1px solid var(--line-soft); font-family: var(--mono); font-size: .9375rem; vertical-align: top; }
+  table.alloc-t tr:last-child td { border-bottom: 0; }
+  table.alloc-t td.num { text-align: right; }
+  table.alloc-t th.num { text-align: right; }
+  table.alloc-t tbody tr { transition: background-color .15s ease; }
+  table.alloc-t tbody tr.is-hot { background: var(--surface); }
+  .swatch { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font); font-weight: 500; }
+  .swatch i { width: 12px; height: 12px; border-radius: 3px; }
+  .range { white-space: nowrap; }
+  .range small { display: block; color: var(--text-2); font-size: .8125rem; margin-top: 2px; }
+
+  footer { border-top: 1px solid var(--line); color: var(--text-3); font-size: .8125rem; padding: 16px 0 32px; }
+
+  .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  .fade-in { animation: rise .22s cubic-bezier(.16,1,.3,1); }
+  @keyframes rise { from { opacity: .4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .grow-in .seg, .grow-in .hosts { animation: grow .45s cubic-bezier(.16,1,.3,1) both; transform-origin: left center; }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 720px) {
+    .wrap { padding: 0 16px; }
+    .brand h1 { font-size: 1.375rem; }
+    .brand p { display: none; }
+    main { padding-top: 20px; }
+    .card { padding: 16px; }
+    .field.prefix { width: auto; flex: 0 0 104px; }
+    .field.grow { flex: 1 1 180px; }
+    .form-row .field-spacer { padding-top: 0; width: 100%; }
+    .form-row .field-spacer .btn { width: 100%; }
+    .values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .values div { border-right: 1px solid var(--line-soft) !important; border-bottom: 1px solid var(--line-soft) !important; }
+    .values div:nth-child(2n) { border-right: 0 !important; }
+    .values div:nth-last-child(-n+2) { border-bottom: 0 !important; }
+    .ruler .ends { font-size: .75rem; }
+    .vlsm-actions .btn-primary { width: 100%; }
+
+    table.alloc-t thead { display: none; }
+    table.alloc-t, table.alloc-t tbody, table.alloc-t tr, table.alloc-t td { display: block; width: 100%; }
+    table.alloc-t tr { padding: 12px 16px; border-bottom: 1px solid var(--line-soft); }
+    table.alloc-t tr:last-child { border-bottom: 0; }
+    table.alloc-t td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 16px; text-align: right; }
+    table.alloc-t td.num { text-align: right; }
+    table.alloc-t td::before { content: attr(data-label); font-family: var(--font); font-size: .8125rem; color: var(--text-2); text-align: left; }
+    table.alloc-t td:first-child { padding-bottom: 6px; }
+    table.alloc-t td:first-child::before { content: none; }
+
+    table.bits { min-width: 0; }
+    table.bits tr { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; padding: 8px 14px; }
+    table.bits th, table.bits td { padding: 0; }
+    table.bits th { width: auto; }
+    table.bits td.dec { width: auto; padding: 0; text-align: right; }
+    table.bits td.bin { grid-column: 1 / -1; font-size: .8125rem; letter-spacing: 0; padding-top: 4px; }
+    table.bits tr.op { padding: 0 14px; }
+    table.bits tr.op td.dec { text-align: left; grid-column: 1 / -1; }
+    table.bits tr.op th, table.bits tr.op td.bin { display: none; }
+  }
+  @media (max-width: 400px) {
+    .values { grid-template-columns: 1fr; }
+    .values div { border-right: 0 !important; border-bottom: 1px solid var(--line-soft) !important; }
+    .values div:last-child { border-bottom: 0 !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
+        <rect x="2" y="12" width="32" height="12" rx="3" fill="#e8f0fe"/>
+        <rect x="2" y="12" width="16" height="12" rx="3" fill="#1a73e8"/>
+        <rect x="19" y="12" width="8" height="12" fill="#1e8e3e"/>
+        <rect x="28" y="12" width="4" height="12" fill="#f9ab00"/>
+        <path d="M2 28h32M2 28v3M10 28v2M18 28v3M26 28v2M34 28v3" stroke="#5f6368" stroke-width="1.5" fill="none"/>
+      </svg>
+      <div>
+        <h1>Kalkulator Subnet &amp; VLSM</h1>
+        <p>Untuk guru TKJ: setiap hasil disertai penggaris alamat dan jejak biner AND.</p>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Mode kalkulator">
+      <button class="tab" role="tab" id="tab-subnet" aria-controls="panel-subnet" aria-selected="true">Subnet</button>
+      <button class="tab" role="tab" id="tab-vlsm" aria-controls="panel-vlsm" aria-selected="false" tabindex="-1">VLSM</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ================= SUBNET ================= -->
+  <section id="panel-subnet" role="tabpanel" aria-labelledby="tab-subnet">
+    <form id="form-subnet" class="card" novalidate>
+      <div class="form-row">
+        <div class="field grow">
+          <label for="ip">Alamat IPv4</label>
+          <div class="control" id="ctl-ip">
+            <input id="ip" name="ip" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="172.16.5.130" aria-describedby="err-subnet">
+          </div>
+        </div>
+        <div class="field prefix">
+          <label for="prefix">Prefix</label>
+          <div class="control" id="ctl-prefix">
+            <span class="affix" aria-hidden="true">/</span>
+            <input id="prefix" name="prefix" inputmode="numeric" autocomplete="off" placeholder="25" aria-describedby="err-subnet">
+          </div>
+        </div>
+        <div class="field-spacer">
+          <button class="btn btn-primary" type="submit" id="btn-subnet">Hitung</button>
+        </div>
+      </div>
+      <p class="error" id="err-subnet" role="alert" hidden></p>
+    </form>
+
+    <div id="subnet-empty" class="empty">
+      <h2>Belum ada hasil</h2>
+      <p>Masukkan alamat IPv4 dan prefix 0–32. Hasilnya ditampilkan di penggaris alamat (letak IP di dalam bloknya) dan di tabel biner IP AND subnet mask.</p>
+      <p class="hint">Contoh dari soal: <button type="button" data-example="172.16.5.130/25">172.16.5.130/25</button> · <button type="button" data-example="192.168.1.0/31">192.168.1.0/31</button> · <button type="button" data-example="192.168.1.5/32">192.168.1.5/32</button></p>
+      <div class="ghost" aria-hidden="true">
+        <div class="ruler" style="padding:0"><div class="track"><div class="ticks"></div></div></div>
+      </div>
+    </div>
+
+    <div id="subnet-result" class="result" hidden aria-live="polite"></div>
+  </section>
+
+  <!-- ================= VLSM ================= -->
+  <section id="panel-vlsm" role="tabpanel" aria-labelledby="tab-vlsm" hidden>
+    <form id="form-vlsm" class="card" novalidate>
+      <div class="form-row">
+        <div class="field grow">
+          <label for="network">Network (CIDR)</label>
+          <div class="control" id="ctl-network">
+            <input id="network" name="network" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1.0/24" aria-describedby="err-vlsm">
+          </div>
+        </div>
+      </div>
+
+      <div class="needs">
+        <div class="needs-head">
+          <span id="needs-label">Kebutuhan host per subnet</span>
+          <button type="button" class="btn btn-text" id="add-need">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Tambah subnet
+          </button>
+        </div>
+        <ol class="needs-list" id="needs-list" aria-labelledby="needs-label"></ol>
+      </div>
+
+      <div class="vlsm-actions">
+        <p class="hint" style="margin:0">Diurutkan otomatis dari kebutuhan terbesar, lalu dialokasikan berurutan dari alamat network.</p>
+        <button class="btn btn-primary" type="submit" id="btn-vlsm">Alokasikan</button>
+      </div>
+      <p class="error" id="err-vlsm" role="alert" hidden></p>
+    </form>
+
+    <div id="vlsm-empty" class="empty">
+      <h2>Belum ada alokasi</h2>
+      <p>Isi network induk dan kebutuhan host tiap subnet. Hasilnya: penggaris yang menunjukkan cara blok induk terbagi beserta sisa ruangnya, dan tabel alamat tiap subnet.</p>
+      <p class="hint">Contoh dari soal: <button type="button" id="vlsm-example">192.168.1.0/24 untuk 100, 50, 20, 2 host</button></p>
+    </div>
+
+    <div id="vlsm-result" class="result" hidden aria-live="polite"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Perhitungan dilakukan di server (FastAPI). Aturan /31 mengikuti RFC 3021 (point-to-point); /32 adalah satu host.</div>
+</footer>
+
+<template id="tpl-need">
+  <li class="need">
+    <div class="control">
+      <span class="affix" aria-hidden="true"></span>
+      <input type="number" min="1" step="1" inputmode="numeric" placeholder="0">
+      <span class="unit" aria-hidden="true">host</span>
+    </div>
+    <button type="button" class="icon-btn remove">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </li>
+</template>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (n) => Number(n).toLocaleString("id-ID");
+  const ERR_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 7v6M12 16.5v.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+  /* ---- Tampilan saja: ubah notasi desimal bertitik ke bit untuk ditampilkan.
+         Semua perhitungan subnet dilakukan backend. ---- */
+  const toInt = (dotted) => dotted.split(".").reduce((acc, o) => acc * 256 + Number(o), 0);
+  const toBits = (dotted) => dotted.split(".").map((o) => Number(o).toString(2).padStart(8, "0")).join("");
+
+  function bitsHtml(dotted, prefix) {
+    const bits = toBits(dotted);
+    let out = "";
+    for (let i = 0; i < 32; i++) {
+      if (i > 0 && i % 8 === 0) out += '<span class="b-dot">.</span>';
+      if (i === prefix && prefix > 0 && prefix < 32) out += '<span class="b-cut" title="batas prefix /' + prefix + '"></span>';
+      out += '<span class="' + (i < prefix ? "b-n" : "b-h") + '">' + bits[i] + "</span>";
+    }
+    return out;
+  }
+
+  /* ---- API ---- */
+  async function api(url, options) {
+    let res;
+    try {
+      res = await fetch(url, options);
+    } catch {
+      throw new Error("Server tidak dapat dihubungi. Pastikan aplikasi sedang berjalan.");
+    }
+    let data = null;
+    try { data = await res.json(); } catch { /* bukan JSON */ }
+    if (!res.ok) {
+      let detail = data && data.detail;
+      if (Array.isArray(detail)) detail = detail.map((d) => d.msg || String(d)).join("; ");
+      throw new Error(detail || "Permintaan gagal (HTTP " + res.status + ").");
+    }
+    return data;
+  }
+
+  function showError(el, msg, controls) {
+    el.innerHTML = ERR_ICON + "<span>" + esc(msg) + "</span>";
+    el.hidden = false;
+    controls.forEach((c) => { c.classList.add("invalid"); const i = c.querySelector("input"); if (i) i.setAttribute("aria-invalid", "true"); });
+  }
+  function clearError(el, root) {
+    el.hidden = true; el.textContent = "";
+    root.querySelectorAll(".control.invalid").forEach((c) => { c.classList.remove("invalid"); const i = c.querySelector("input"); if (i) i.removeAttribute("aria-invalid"); });
+  }
+  function busy(btn, on, label) {
+    btn.disabled = on;
+    btn.textContent = on ? "Menghitung…" : label;
+  }
+
+  /* ================= Tabs ================= */
+  const tabs = [$("#tab-subnet"), $("#tab-vlsm")];
+  function selectTab(tab, focus) {
+    tabs.forEach((t) => {
+      const on = t === tab;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+      $("#" + t.getAttribute("aria-controls")).hidden = !on;
+    });
+    if (focus) tab.focus();
+    try { history.replaceState(null, "", tab.id === "tab-vlsm" ? "#vlsm" : location.pathname + location.search); } catch {}
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => selectTab(t));
+    t.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        selectTab(tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length], true);
+      }
+    });
+  });
+
+  /* ================= Subnet ================= */
+  const fSub = $("#form-subnet"), ipIn = $("#ip"), pfIn = $("#prefix"), errSub = $("#err-subnet");
+  const subEmpty = $("#subnet-empty"), subOut = $("#subnet-result"), btnSub = $("#btn-subnet");
+
+  function errorTargets(msg) {
+    const m = msg.toLowerCase();
+    if (m.includes("prefix")) return [$("#ctl-prefix")];
+    if (m.includes("ip") || m.includes("oktet") || m.includes("alamat")) return [$("#ctl-ip")];
+    return [$("#ctl-ip"), $("#ctl-prefix")];
+  }
+
+  async function runSubnet(pushUrl = true) {
+    clearError(errSub, fSub);
+    const ip = ipIn.value, prefix = pfIn.value.trim();
+    busy(btnSub, true, "Hitung");
+    try {
+      const q = new URLSearchParams({ ip, prefix });
+      const r = await api("/api/subnet?" + q.toString());
+      renderSubnet(ip, Number(prefix), r);
+      if (pushUrl) { try { history.replaceState(null, "", "?" + q.toString()); } catch {} }
+    } catch (e) {
+      subOut.hidden = true; subOut.innerHTML = "";
+      subEmpty.hidden = false;
+      showError(errSub, e.message, errorTargets(e.message));
+    } finally {
+      busy(btnSub, false, "Hitung");
+    }
+  }
+
+  function renderSubnet(ip, prefix, r) {
+    const size = Math.pow(2, 32 - prefix);
+    const net = toInt(r.network);
+    const pct = (n) => (n / size) * 100;
+    const ipPos = Math.min(99.5, Math.max(0.5, pct(toInt(ip) - net + 0.5)));
+    const firstOff = toInt(r.first_host) - net;
+    const lastOff = toInt(r.last_host) - net;
+    const hasBc = r.broadcast !== null && r.broadcast !== undefined;
+
+    let bcText = esc(r.broadcast), bcNote = "";
+    if (!hasBc) {
+      bcText = "—";
+      bcNote = prefix === 31 ? "Tidak ada: point-to-point (RFC 3021)" : "Tidak ada: host tunggal (/32)";
+    }
+
+    const ruler = `
+      <div class="ruler grow-in" role="img" aria-label="Penggaris blok ${esc(r.network)}/${prefix}: ${fmt(size)} alamat, IP ${esc(ip)} berada di dalamnya.">
+        <div class="track">
+          <div class="hosts" style="left:${pct(firstOff)}%;width:${pct(lastOff - firstOff + 1)}%"></div>
+          <div class="ticks" style="--ticks:${Math.min(size, 8)}"></div>
+          ${hasBc ? `<div class="edge net" style="left:0;width:${pct(1)}%"></div><div class="edge bc" style="right:0;width:${pct(1)}%"></div>` : ""}
+        </div>
+        <div class="marker${ipPos < 12 ? " at-start" : ipPos > 88 ? " at-end" : ""}" style="left:${ipPos}%"><span class="pin">${esc(ip)}</span></div>
+        <div class="ends">
+          <div>${hasBc ? "Network" : "Awal blok"}<strong>${esc(r.network)}</strong></div>
+          <div class="right">${hasBc ? "Broadcast" : "Akhir blok"}<strong>${esc(hasBc ? r.broadcast : r.last_host)}</strong></div>
+        </div>
+      </div>`;
+
+    const values = `
+      <dl class="values">
+        <div><dt>Subnet mask</dt><dd>${esc(r.mask)}</dd></div>
+        <div><dt>Network address</dt><dd>${esc(r.network)}</dd></div>
+        <div><dt>Broadcast address</dt><dd>${bcText}${bcNote ? `<span class="note">${bcNote}</span>` : ""}</dd></div>
+        <div><dt>Host pertama</dt><dd>${esc(r.first_host)}</dd></div>
+        <div><dt>Host terakhir</dt><dd>${esc(r.last_host)}</dd></div>
+        <div><dt>Jumlah host usable</dt><dd class="big">${fmt(r.usable_hosts)}</dd></div>
+      </dl>`;
+
+    const bcRow = hasBc ? `
+            <tr class="sum soft"><th scope="row">Broadcast</th><td class="dec">${esc(r.broadcast)}</td><td class="bin">${bitsHtml(r.broadcast, prefix)}</td></tr>` : "";
+
+    const trace = `
+      <section class="trace" aria-labelledby="trace-h">
+        <h3 id="trace-h">Jejak biner: IP AND subnet mask</h3>
+        <div class="legends">
+          <span class="legend"><i style="background:var(--blue)"></i>${prefix} bit network</span>
+          <span class="legend"><i style="background:var(--host)"></i>${32 - prefix} bit host</span>
+          <span class="legend"><i style="background:var(--red);width:3px"></i>batas prefix</span>
+        </div>
+        <p>Bit network disalin apa adanya. Bit host dibuat 0 untuk network${hasBc ? " dan 1 untuk broadcast" : ""}.</p>
+        <div class="bits-scroll" tabindex="0" aria-label="Tabel biner, dapat digulir">
+          <table class="bits">
+            <tbody>
+              <tr><th scope="row">Alamat IP</th><td class="dec">${esc(ip)}</td><td class="bin">${bitsHtml(ip, prefix)}</td></tr>
+              <tr class="op"><th scope="row"></th><td class="dec">AND</td><td></td></tr>
+              <tr><th scope="row">Subnet mask</th><td class="dec">${esc(r.mask)}</td><td class="bin">${bitsHtml(r.mask, prefix)}</td></tr>
+              <tr class="sum"><th scope="row">Network</th><td class="dec">${esc(r.network)}</td><td class="bin">${bitsHtml(r.network, prefix)}</td></tr>${bcRow}
+            </tbody>
+          </table>
+        </div>
+      </section>`;
+
+    subOut.innerHTML = `
+      <div class="result-head">
+        <h2>Hasil <span class="cidr">${esc(ip)}/${prefix}</span></h2>
+        <span class="meta">Ukuran blok ${fmt(size)} alamat</span>
+      </div>
+      ${ruler}${values}${trace}`;
+    subOut.hidden = false;
+    subOut.classList.remove("fade-in"); void subOut.offsetWidth; subOut.classList.add("fade-in");
+    subEmpty.hidden = true;
+  }
+
+  fSub.addEventListener("submit", (e) => { e.preventDefault(); runSubnet(); });
+  [ipIn, pfIn].forEach((i) => i.addEventListener("input", () => { if (!errSub.hidden) clearError(errSub, fSub); }));
+  document.querySelectorAll("[data-example]").forEach((b) => b.addEventListener("click", () => {
+    const [ip, p] = b.dataset.example.split("/");
+    ipIn.value = ip; pfIn.value = p; runSubnet();
+  }));
+
+  /* ================= VLSM ================= */
+  const fV = $("#form-vlsm"), netIn = $("#network"), list = $("#needs-list"), errV = $("#err-vlsm");
+  const vEmpty = $("#vlsm-empty"), vOut = $("#vlsm-result"), btnV = $("#btn-vlsm"), tpl = $("#tpl-need");
+
+  function renumber() {
+    const items = [...list.children];
+    items.forEach((li, i) => {
+      li.querySelector(".affix").textContent = "#" + (i + 1);
+      li.querySelector("input").setAttribute("aria-label", "Kebutuhan host subnet " + (i + 1));
+      const rm = li.querySelector(".remove");
+      rm.setAttribute("aria-label", "Hapus subnet " + (i + 1));
+      rm.disabled = items.length === 1;
+    });
+  }
+  function addNeed(value = "", focus = false) {
+    const li = tpl.content.firstElementChild.cloneNode(true);
+    const input = li.querySelector("input");
+    input.value = value;
+    input.addEventListener("input", () => { if (!errV.hidden) clearError(errV, fV); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); addNeed("", true); }
+    });
+    li.querySelector(".remove").addEventListener("click", () => {
+      const next = li.nextElementSibling || li.previousElementSibling;
+      li.remove(); renumber();
+      if (next) next.querySelector("input").focus();
+    });
+    list.appendChild(li);
+    renumber();
+    if (focus) input.focus();
+  }
+  $("#add-need").addEventListener("click", () => addNeed("", true));
+  netIn.addEventListener("input", () => { if (!errV.hidden) clearError(errV, fV); });
+
+  function setNeeds(values) { list.innerHTML = ""; values.forEach((v) => addNeed(String(v))); }
+
+  function readNeeds() {
+    const raw = [...list.querySelectorAll("input")].map((i) => i.value.trim());
+    // Kirim apa adanya ke server; validasi ada di backend.
+    return raw.map((v) => (v === "" ? NaN : Number(v)));
+  }
+
+  async function runVlsm() {
+    clearError(errV, fV);
+    const needs = readNeeds();
+    if (needs.some((n) => !Number.isInteger(n))) {
+      vOut.hidden = true; vEmpty.hidden = false;
+      const bad = [...list.querySelectorAll("input")].filter((i) => !Number.isInteger(Number(i.value.trim())) || i.value.trim() === "");
+      showError(errV, "Setiap kebutuhan host harus diisi bilangan bulat.", bad.map((i) => i.closest(".control")));
+      return;
+    }
+    busy(btnV, true, "Alokasikan");
+    try {
+      const body = { network: netIn.value, kebutuhan_host: needs };
+      const r = await api("/api/vlsm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      renderVlsm(netIn.value.trim(), r);
+    } catch (e) {
+      vOut.hidden = true; vOut.innerHTML = ""; vEmpty.hidden = false;
+      const m = e.message.toLowerCase();
+      const targets = m.includes("tidak cukup") || m.includes("muat") ? []
+        : m.includes("kebutuhan") || m.includes("daftar") ? [...list.querySelectorAll(".control")]
+        : [$("#ctl-network")];
+      showError(errV, e.message, targets);
+    } finally {
+      busy(btnV, false, "Alokasikan");
+    }
+  }
+
+  function renderVlsm(cidr, rows) {
+    const [base, pStr] = cidr.split("/");
+    const parentPrefix = Number(pStr);
+    const total = Math.pow(2, 32 - parentPrefix);
+    const start = toInt(base);
+    let used = 0;
+
+    const segs = rows.map((b, i) => {
+      const p = Number(b.network_cidr.split("/")[1]);
+      const size = Math.pow(2, 32 - p);
+      used += size;
+      const left = ((toInt(b.network) - start) / total) * 100;
+      const width = (size / total) * 100;
+      const c = (i % 6) + 1;
+      return { b, p, size, left, width, c, n: i + 1 };
+    });
+    const freePct = 100 - (used / total) * 100;
+    const usedPct = (used / total) * 100;
+
+    const segHtml = segs.map((s) => `
+      <div class="seg" data-n="${s.n}" data-i="${s.n - 1}"
+           style="left:${s.left}%;width:${s.width}%;background:var(--seg-${s.c});color:var(--seg-${s.c}-ink)"
+           title="#${s.n} ${esc(s.b.network_cidr)} · ${fmt(s.size)} alamat">
+        <b>${esc(s.b.network_cidr)}</b><span>${fmt(s.b.kebutuhan)} host · blok ${fmt(s.size)}</span>
+      </div>`).join("");
+    const freeHtml = freePct > 0 ? `<div class="free-label" style="left:${usedPct}%;width:${freePct}%"><span>Sisa ${fmt(total - used)} alamat</span></div>` : "";
+
+    const ruler = `
+      <div class="ruler vlsm grow-in" role="img" aria-label="Penggaris ${esc(cidr)}: ${segs.length} subnet memakai ${fmt(used)} dari ${fmt(total)} alamat.">
+        <div class="track">${segHtml}${freeHtml}</div>
+        <div class="ends">
+          <div>Awal<strong>${esc(base)}</strong></div>
+          <div class="right">Ukuran induk<strong>${fmt(total)} alamat</strong></div>
+        </div>
+      </div>`;
+
+    const body = segs.map((s) => {
+      const b = s.b;
+      const bc = b.broadcast == null ? "—" : esc(b.broadcast);
+      return `<tr data-i="${s.n - 1}">
+        <td><span class="swatch"><i style="background:var(--seg-${s.c}-edge)"></i>#${s.n}</span></td>
+        <td class="num" data-label="Kebutuhan">${fmt(b.kebutuhan)}</td>
+        <td data-label="Network">${esc(b.network_cidr)}</td>
+        <td data-label="Subnet mask">${esc(b.mask)}</td>
+        <td class="range" data-label="Range host"><span>${esc(b.first_host)}<small>s.d. ${esc(b.last_host)}</small></span></td>
+        <td data-label="Broadcast">${bc}</td>
+        <td class="num" data-label="Host usable">${fmt(b.usable_hosts)}</td>
+      </tr>`;
+    }).join("");
+
+    vOut.innerHTML = `
+      <div class="result-head">
+        <h2>Alokasi <span class="cidr">${esc(cidr)}</span></h2>
+        <span class="usage">Terpakai ${fmt(used)} dari ${fmt(total)} alamat (${usedPct.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%)</span>
+      </div>
+      ${ruler}
+      <section class="alloc" aria-labelledby="alloc-h">
+        <h3 id="alloc-h">Tabel subnet (urutan alokasi)</h3>
+        <div class="alloc-wrap">
+          <table class="alloc-t">
+            <thead><tr><th>Subnet</th><th class="num">Kebutuhan</th><th>Network</th><th>Subnet mask</th><th>Range host</th><th>Broadcast</th><th class="num">Host usable</th></tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </section>`;
+    vOut.hidden = false;
+    vOut.classList.remove("fade-in"); void vOut.offsetWidth; vOut.classList.add("fade-in");
+    vEmpty.hidden = true;
+    fitSegments();
+
+    // Sorot segmen <-> baris tabel
+    const hot = (i, on) => {
+      vOut.querySelectorAll(`[data-i="${i}"]`).forEach((el) => el.classList.toggle("is-hot", on));
+    };
+    vOut.querySelectorAll("[data-i]").forEach((el) => {
+      el.addEventListener("mouseenter", () => hot(el.dataset.i, true));
+      el.addEventListener("mouseleave", () => hot(el.dataset.i, false));
+    });
+  }
+
+  // Label segmen yang tidak muat diganti nomor subnet (lihat tabel); lebar segmen tetap sebanding persis.
+  function fitSegments() {
+    vOut.querySelectorAll(".seg").forEach((s) => {
+      s.classList.remove("narrow");
+      if (s.scrollWidth > s.clientWidth + 1) s.classList.add("narrow");
+    });
+    vOut.querySelectorAll(".free-label").forEach((f) => {
+      const span = f.firstElementChild;
+      span.hidden = false;
+      if (f.scrollWidth > f.clientWidth + 1) span.hidden = true;
+    });
+  }
+  let fitTimer;
+  window.addEventListener("resize", () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitSegments, 100); });
+
+  fV.addEventListener("submit", (e) => { e.preventDefault(); runVlsm(); });
+  $("#vlsm-example").addEventListener("click", () => {
+    netIn.value = "192.168.1.0/24"; setNeeds([100, 50, 20, 2]); runVlsm();
+  });
+
+  /* ================= Init ================= */
+  setNeeds(["", ""]);
+  const params = new URLSearchParams(location.search);
+  if (location.hash === "#vlsm") selectTab(tabs[1]);
+  else if (params.has("ip") && params.has("prefix")) {
+    ipIn.value = params.get("ip"); pfIn.value = params.get("prefix"); runSubnet(false);
+  }
+})();
+</script>
+</body>
+</html>
